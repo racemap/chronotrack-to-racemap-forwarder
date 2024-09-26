@@ -1,8 +1,10 @@
 import APIClient from "./api-client";
+import ChronoTrackForwarder from "./forwarder";
 import { error, info, log, success } from "./functions";
 
 const RACEMAP_GENERIC_READS_API_TOKEN = process.env.RACEMAP_GENERIC_READS_API_TOKEN ?? "";
-const apiClient = new APIClient();
+const LISTEN_PORT = Number.parseInt(process.env.LISTEN_PORT ?? "3000");
+const apiClient = new APIClient({ "api-token": RACEMAP_GENERIC_READS_API_TOKEN });
 
 async function main() {
   log("Hello from chronotrack-forwarder");
@@ -20,13 +22,9 @@ async function main() {
   const isAvail = await apiClient.checkAvailibility();
   if (isAvail.status === 200) {
     success(`|-> API Token is valid`);
+    new ChronoTrackForwarder(RACEMAP_GENERIC_READS_API_TOKEN, LISTEN_PORT);
   } else {
     throw new Error(`API Token is invalid. Please check your token and try again.`);
-  }
-
-  try {
-  } catch (e) {
-    error("Error reading user api token. Did you saved it in put-your-api-token-here.txt", e);
   }
 }
 

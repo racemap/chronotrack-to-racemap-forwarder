@@ -15,12 +15,6 @@ class APIClient {
       ...options,
       headers: { ...this._headers, ...options.headers },
     });
-
-    console.log({
-      ...options,
-      headers: { ...this._headers, ...options.headers },
-    });
-
     return res;
   }
 

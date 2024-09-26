@@ -8,10 +8,10 @@
   "packageManager": "yarn@4.5.0",
   "scripts": {
     "build": "yarn build-forwarder && yarn build-tests",
-    "build-forwarder": "esbuild src/forwarder.ts --bundle --platform=node --outfile=.build/forwarder.js",
+    "build-forwarder": "esbuild src/main.ts --bundle --platform=node --outfile=.build/forwarder.js",
     "build-tests": "esbuild tests/test-chronotrack-forwarder.ts --bundle --platform=node --outfile=.build/test-chronotrack-forwarder.js",
     "test": "yarn build && dotenv-load ava .build/test-chronotrack-forwarder.js",
-    "start": "yarn build && dotenv-load node .build/forwarder.js",
+    "dev": "yarn build && dotenv-load node .build/forwarder.js ",
     "pretty": "prettier --write .",
     "prepare": "husky"
   },
