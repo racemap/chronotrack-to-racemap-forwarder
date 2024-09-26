@@ -1,0 +1,30 @@
+{
+  "name": "v2",
+  "version": "1.0.0",
+  "main": "src/forwarder.ts",
+  "author": "jens",
+  "license": "MIT",
+  "private": true,
+  "packageManager": "yarn@4.5.0",
+  "scripts": {
+    "build": "esbuild src/forwarder.ts --bundle --platform=node --outfile=.build/forwarder.js",
+    "start": "yarn build && dotenv-load node .build/forwarder.js",
+    "check": "biome check .",
+    "fix": "biome check --apply ."
+  },
+  "devDependencies": {
+    "biome": "^0.3.3",
+    "dotenv-load": "^3.0.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.2"
+  },
+  "dependencies": {
+    "@types/lodash": "^4.17.9",
+    "@types/moment": "^2.13.0",
+    "@types/node": "^22.7.2",
+    "@types/shortid": "^0.0.32",
+    "lodash": "^4.17.21",
+    "moment": "^2.30.1",
+    "shortid": "^2.2.16"
+  }
+}

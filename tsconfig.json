@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "noImplicitAny": true,
+    "isolatedModules": true,
+    "useDefineForClassFields": true,
+    "module": "CommonJS",
+    "jsx": "react",
+    "sourceMap": true,
+    "target": "ESNext",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "typeRoots": ["./node_modules/@types", "./shared/utilities/types"]
+  },
+  "include": ["**/*"],
+  "exclude": ["node_modules"]
+}

@@ -1,3 +1,6 @@
+# Builded stuff
+.build
+
 # Logs
 logs
 *.log
