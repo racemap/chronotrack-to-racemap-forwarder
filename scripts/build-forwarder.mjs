@@ -2,8 +2,8 @@ import esbuild from "esbuild";
 esbuild.buildSync({
   nodePaths: ["./node_modules"],
   platform: "node",
-  entryPoints: ["src/forwarder.ts"],
+  entryPoints: ["src/main.ts"],
   bundle: true,
   external: ["net", "fs"],
-  outfile: ".build/forwarder.js",
+  outfile: ".build/forwarer.js",
 });

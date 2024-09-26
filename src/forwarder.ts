@@ -1,50 +1,48 @@
-import fs from 'fs';
-import net from 'net';
-import moment from 'moment';
-import shortId from 'shortid';
-import APIClient from './api-client';
-import { BaseClass } from './base-class';
-import { ChronoTrackCommands } from './consts';
-import { ChronoTrackClientMetadata, ChronoTrackProtocol, TimePing } from './types';
-import { error, info, log, processStoredData, storeIncomingRawData, success, warn } from './functions';
+import fs from "fs";
+import net from "net";
+import _pick from "lodash/pick";
+import moment from "moment";
+import shortId from "shortid";
+import APIClient from "./api-client";
+import { BaseClass } from "./base-class";
+import { ChronoTrackCommands } from "./consts";
+import {
+  ChronoTrackDevice,
+  ChronoTrackProtocol,
+  ExtendedSocket,
+  MessageParts,
+  TimePing,
+} from "./types";
+import {
+  error,
+  info,
+  log,
+  processStoredData,
+  storeIncomingRawData,
+  success,
+  warn,
+} from "./functions";
 
-
-type ExtendedSocket = net.Socket & {
-  id: string;
-  meta: ChronoTrackClientMetadata;
-  token: string;
-  cache: { lastTime: number; buffer: Buffer; name: string };
-  userId: string;
-  openedAt: Date;
-  identified: boolean;
-  keepAliveTimerHandle: NodeJS.Timeout | null;
-  triggerStartTransmissionHandle: NodeJS.Timeout | null;
-  sendKeepAlivePing: () => void;
-  sendFrame: (text: string) => void;
-  sendObject: (object: Record<string, string>) => void;
-};
-
-type MessageParts = Array<string>;
-
-
-const RACEMAP_GENERIC_READS_API_TOKEN = process.env.RACEMAP_GENERIC_READS_API_TOKEN ?? '';
 const MAX_MESSAGE_DATA_DELAY_IN_MS = 500;
 
-const WELCOME_MESSAGE = 'RacemapChronoTrackReceiver~v1.0.0';
-const SUPPORTED_PROTOCOL = 'CTP01';
-const CRLF = '\r\n';
+const WELCOME_MESSAGE = "RacemapChronoTrackReceiver~v1.0.0";
+const SUPPORTED_PROTOCOL = "CTP01";
+const CRLF = "\r\n";
 const FEATURES = {
-  guntimes: 'true',
-  newlocations: 'true',
-  'connection-id': 'false',
-  'stream-mode': 'push',
-  'time-format': 'iso',
+  guntimes: "true",
+  newlocations: "true",
+  "connection-id": "false",
+  "stream-mode": "push",
+  "time-format": "iso",
 };
 
 const apiClient = new APIClient();
 
 const logToFileSystem = (message: Buffer) => {
-  fs.appendFileSync( './ChronoTrackInputAdapter.log', `${new Date().toISOString()} message: ${message}\n` );
+  fs.appendFileSync(
+    "./ChronoTrackInputAdapter.log",
+    `${new Date().toISOString()} message: ${message}\n`,
+  );
 };
 
 const clearIntervalTimer = (timerHandle: NodeJS.Timeout | null) => {
@@ -53,29 +51,40 @@ const clearIntervalTimer = (timerHandle: NodeJS.Timeout | null) => {
   }
 };
 
-class ChronoTrackInputAdapter extends BaseClass {
+class ChronoTrackForwarder extends BaseClass {
   _connections: Map<string, ExtendedSocket> = new Map();
   _server: net.Server;
   _apiToken: string;
 
-  constructor(apiToken : string, listenPort: number, justLocalHost = true) {
+  constructor(apiToken: string, listenPort: number, justLocalHost = true) {
     super();
 
-    this._apiToken = apiToken
+    this._apiToken = apiToken;
     this._server = this._configureReceiverSocket(
       listenPort,
-      justLocalHost ? '127.0.0.1' : '0.0.0.0',
+      justLocalHost ? "127.0.0.1" : "0.0.0.0",
     );
   }
 
-  _configureReceiverSocket = (listenPort: number, bindAddress: string): net.Server => {
-    const server = net.createServer(this._onNewConnection as (socket: net.Socket) => void);
+  getConnectedChronoTrackDevices(): Array<ChronoTrackDevice> {
+    return Array.from(this._connections.entries()).map(([_id, socket]) => {
+      return _pick(socket, ["id", "meta", "openedAt"]);
+    });
+  }
+
+  _configureReceiverSocket = (
+    listenPort: number,
+    bindAddress: string,
+  ): net.Server => {
+    const server = net.createServer(
+      this._onNewConnection as (socket: net.Socket) => void,
+    );
     server.listen({ host: bindAddress, port: listenPort }, () => {
       info(
         `${this.className} is listening on \x1b[32m${bindAddress}\x1b[0m:\x1b[35m${listenPort}\x1b[0m`,
       );
     });
-    server.on('error', (err) => {
+    server.on("error", (err) => {
       error(`${this.className}._configureReceiverSocket`, err);
     });
     return server;
@@ -85,7 +94,7 @@ class ChronoTrackInputAdapter extends BaseClass {
     log(`${this.className}Socket.onNewConnection`);
 
     socket.id = shortId.generate();
-    socket.userId = '';
+    socket.userId = "";
     socket.openedAt = new Date();
     socket.identified = false;
     socket.cache = {
@@ -98,7 +107,7 @@ class ChronoTrackInputAdapter extends BaseClass {
 
     this._connections.set(socket.id, socket); // The server knows its sockets
 
-    socket.on('error', (error: Error) => {
+    socket.on("error", (error: Error) => {
       if (error != null) {
         log(`${this.className}Socket.onError: ${error} ${error.stack}`);
         clearIntervalTimer(socket.keepAliveTimerHandle);
@@ -107,14 +116,14 @@ class ChronoTrackInputAdapter extends BaseClass {
       }
     });
 
-    socket.on('end', () => {
+    socket.on("end", () => {
       log(`${this.className}Socket.onEnd`);
       clearIntervalTimer(socket.keepAliveTimerHandle);
       clearIntervalTimer(socket.triggerStartTransmissionHandle);
       this._connections.delete(socket.id);
     });
 
-    socket.on('data', (data: Buffer) => {
+    socket.on("data", (data: Buffer) => {
       try {
         storeIncomingRawData(data, socket.cache, MAX_MESSAGE_DATA_DELAY_IN_MS);
         processStoredData(socket.cache, (message) => {
@@ -149,7 +158,7 @@ class ChronoTrackInputAdapter extends BaseClass {
       try {
         logToFileSystem(rawMessage);
         log(`${this.className}._handleMessage.rawMessage: ${rawMessage}`);
-        const separated = rawMessage.toString().split('~');
+        const separated = rawMessage.toString().split("~");
         if (separated.length > 0) {
           if (!socket.identified) {
             this._handleWelcomeMessage(socket, separated);
@@ -163,8 +172,14 @@ class ChronoTrackInputAdapter extends BaseClass {
     }
   };
 
-  _handleWelcomeMessage = (refToSocket: ExtendedSocket, parts: MessageParts): void => {
-    if (parts.length === 3 && (parts[0] === 'SimpleClient' || parts[0] === 'RacemapTestClient')) {
+  _handleWelcomeMessage = (
+    refToSocket: ExtendedSocket,
+    parts: MessageParts,
+  ): void => {
+    if (
+      parts.length === 3 &&
+      (parts[0] === "SimpleClient" || parts[0] === "RacemapTestClient")
+    ) {
       refToSocket.identified = true;
       refToSocket.meta = {
         name: parts[0],
@@ -175,7 +190,9 @@ class ChronoTrackInputAdapter extends BaseClass {
         locations: [],
         clientRespondedAt: new Date(),
       };
-      refToSocket.sendFrame(`${WELCOME_MESSAGE}~${Object.keys(FEATURES).length}`);
+      refToSocket.sendFrame(
+        `${WELCOME_MESSAGE}~${Object.keys(FEATURES).length}`,
+      );
       refToSocket.sendObject(FEATURES);
       refToSocket.sendFrame(ChronoTrackCommands.getconnectionid);
       refToSocket.sendFrame(ChronoTrackCommands.geteventinfo);
@@ -184,7 +201,10 @@ class ChronoTrackInputAdapter extends BaseClass {
     }
   };
 
-  _handleMessages = (refToSocket: ExtendedSocket, parts: MessageParts): void => {
+  _handleMessages = (
+    refToSocket: ExtendedSocket,
+    parts: MessageParts,
+  ): void => {
     if (refToSocket.meta.protocol === SUPPORTED_PROTOCOL) {
       const len = parts.length;
       if (len > 1 && parts[1] === ChronoTrackCommands.getlocations) {
@@ -196,7 +216,10 @@ class ChronoTrackInputAdapter extends BaseClass {
       }
       switch (len) {
         case 2: {
-          if (parts[0] === ChronoTrackCommands.ack && parts[1] === ChronoTrackCommands.ping) {
+          if (
+            parts[0] === ChronoTrackCommands.ack &&
+            parts[1] === ChronoTrackCommands.ping
+          ) {
             refToSocket.meta.clientRespondedAt = new Date();
           }
           break;
@@ -230,7 +253,7 @@ class ChronoTrackInputAdapter extends BaseClass {
           break;
         }
         default: {
-          warn('Message with unknown count of parts received', parts);
+          warn("Message with unknown count of parts received", parts);
           break;
         }
       }
@@ -241,7 +264,10 @@ class ChronoTrackInputAdapter extends BaseClass {
     }
   };
 
-  _processTimePing = (refToSocket: ExtendedSocket, parts: MessageParts): void => {
+  _processTimePing = (
+    refToSocket: ExtendedSocket,
+    parts: MessageParts,
+  ): void => {
     const protocolId = parts[0];
 
     const savePing = (someParts: Array<string>) => {
@@ -249,7 +275,7 @@ class ChronoTrackInputAdapter extends BaseClass {
 
       // All ChronoTrack Transponder IDs are prefixed with ChronoPing_
       // This is to seperate them from Raceresult TransponderIds and common App Ids
-      if (chipId.indexOf('ChronoPing_') !== 0) {
+      if (chipId.indexOf("ChronoPing_") !== 0) {
         chipId = `ChronoPing_${chipId}`;
       }
 
@@ -261,7 +287,7 @@ class ChronoTrackInputAdapter extends BaseClass {
         lat: null,
         lng: null,
         alt: null,
-        timingName: someParts[2],        
+        timingName: someParts[2],
       };
 
       this._pushNonlocatedReadToRacemap(timePing);
@@ -275,9 +301,9 @@ class ChronoTrackInputAdapter extends BaseClass {
            0 Protocol ID         = Always the same will not change
           1 Line Number         = So this isnt increasing anything, it is just the line number/counter
           2 Point               = timing location name
-          3 Tag                 = the tag 😊 / bib numer
+          3 Tag                 = the tag 😊 / bib numer / transpodnerId / chipId
           4 Time of Day         = In local time Europe/Amsterdam, i fit is required we can forward with a time shift the UTC time
-          5 Read Occorence      = How many times the tag has read ( useable for laps )
+          5 Read Occurence      = How many times the tag has read ( useable for laps )
           6 Reader MAC          = Mac adress of the reader
           7 Reader antenna Port = is always between 1-8 It is just for us that we now wich antenna had read something. If this is 0 it will be a GUN START normally
           */
@@ -307,7 +333,9 @@ class ChronoTrackInputAdapter extends BaseClass {
       }
 
       default: {
-        warn(`protocolId: ${protocolId} of ChronoTrack textfile-format is not supported yet`);
+        warn(
+          `protocolId: ${protocolId} of ChronoTrack textfile-format is not supported yet`,
+        );
         break;
       }
     }
@@ -315,63 +343,34 @@ class ChronoTrackInputAdapter extends BaseClass {
 
   _parseTime(_refToSocket: ExtendedSocket, timeString: string): Date {
     let time = new Date(0);
-    switch (FEATURES['time-format']) {
-      case 'normal': {
+    switch (FEATURES["time-format"]) {
+      case "normal": {
         // we have no date just 14:02:15.31
-        time = moment.utc(timeString, 'HH:mm:ss.SS').toDate();
+        time = moment.utc(timeString, "HH:mm:ss.SS").toDate();
         break;
       }
-      case 'iso': {
+      case "iso": {
         // we have: 2008-10-16T14:02:15.31 => expected to be UTC
-        time = moment.utc(timeString, 'YYYY-MM-DDTHH:mm:ss.SS').toDate();
+        time = moment.utc(timeString, "YYYY-MM-DDTHH:mm:ss.SS").toDate();
         break;
       }
-      case 'unix': {
+      case "unix": {
         time = moment.unix(parseFloat(timeString)).toDate();
       }
     }
     return time;
   }
 
-  _triggerStartTransmission(socket: ExtendedSocket, locationName: string): void {
+  _triggerStartTransmission(
+    socket: ExtendedSocket,
+    locationName: string,
+  ): void {
     socket.sendFrame(`${ChronoTrackCommands.start}~${locationName}`);
   }
 
   async _pushNonlocatedReadToRacemap(timePing: TimePing): Promise<void> {
-    log('tryToPushNonlocatedReadToRacemap', timePing);
+    log("tryToPushNonlocatedReadToRacemap", timePing);
   }
 }
 
-
-async function main() {
-  log ('Hello from chronotrack-forwarder');
-  info('Try to read users api token');
-  
-  if (RACEMAP_GENERIC_READS_API_TOKEN === '') {
-    throw new Error(`No api token found. 
-      - Please create an .env file and store your token there. 
-      - The token should look like this: RACEMAP_GENERIC_READS_API_TOKEN=your-api-token
-      - You can get your api token from your racemap account profile section.`
-    );
-  }
-  success(`|-> User token  is availible`);
-  info('Try to check validyty of your API Token, sending an empty dataset.');
-  
-
-  const isAvail = await apiClient.checkAvailibility();
-  if (isAvail.status === 200) {
-    success(`|-> API Token is valid`);
-  } else {
-    throw new Error(`API Token is invalid. Please check your token and try again.`);
-  }
-
-  try {
-
-  } catch (e){    
-    error('Error reading user api token. Did you saved it in put-your-api-token-here.txt',e);
-  }
-  
-}
-
-
-main();
+export default ChronoTrackForwarder;
