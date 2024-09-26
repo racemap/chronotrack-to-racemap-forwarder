@@ -17,18 +17,10 @@ type BufferObject = {
   name?: string;
 };
 
-export const storeIncomingRawData = (
-  incomingData: Buffer,
-  aBufferObject: BufferObject,
-  maxMessageDataDelayInMilis = 200,
-): void => {
-  const newBufferlength: number =
-    aBufferObject.buffer.length + incomingData.length;
+export const storeIncomingRawData = (incomingData: Buffer, aBufferObject: BufferObject, maxMessageDataDelayInMilis = 200): void => {
+  const newBufferlength: number = aBufferObject.buffer.length + incomingData.length;
   const now: number = Date.now();
-  if (
-    aBufferObject.buffer.length > 0 &&
-    aBufferObject.lastTime + maxMessageDataDelayInMilis < now
-  ) {
+  if (aBufferObject.buffer.length > 0 && aBufferObject.lastTime + maxMessageDataDelayInMilis < now) {
     console.warn(
       `storeIncomingRawData - ${aBufferObject.name} Buffer to old!`,
       "ΔT =",
@@ -42,10 +34,7 @@ export const storeIncomingRawData = (
     );
     aBufferObject.buffer = Buffer.alloc(0);
   }
-  aBufferObject.buffer = Buffer.concat(
-    [aBufferObject.buffer, incomingData],
-    newBufferlength,
-  );
+  aBufferObject.buffer = Buffer.concat([aBufferObject.buffer, incomingData], newBufferlength);
   aBufferObject.lastTime = now;
 };
 
@@ -54,34 +43,23 @@ export const storeIncomingRawData = (
  * @param aBufferToProcess
  * @param messageHandler
  */
-export const processStoredData = (
-  aBufferToProcess: BufferObject,
-  messageHandler: (message: Buffer) => void,
-): void => {
+export const processStoredData = (aBufferToProcess: BufferObject, messageHandler: (message: Buffer) => void): void => {
   if (aBufferToProcess.buffer.length > 0) {
     let CRLFPos: number = aBufferToProcess.buffer.indexOf(CRLF);
     while (CRLFPos > -1) {
       // Reserving some Space
       const aMessage: Buffer = Buffer.alloc(CRLFPos);
       // Reserving some Space for the Rest of the Message
-      const aTail: Buffer = Buffer.alloc(
-        aBufferToProcess.buffer.length - CRLFPos - 2,
-      );
+      const aTail: Buffer = Buffer.alloc(aBufferToProcess.buffer.length - CRLFPos - 2);
       // Extracting the message
       aBufferToProcess.buffer.copy(aMessage, 0, 0, CRLFPos);
       // Saving the rest of the message
-      aBufferToProcess.buffer.copy(
-        aTail,
-        0,
-        CRLFPos + 2,
-        aBufferToProcess.buffer.length,
-      );
+      aBufferToProcess.buffer.copy(aTail, 0, CRLFPos + 2, aBufferToProcess.buffer.length);
       // shortening the Raw Buffer
       aBufferToProcess.buffer = aTail;
       CRLFPos = aBufferToProcess.buffer.indexOf(CRLF);
       // trying to analyse the message
-      if (messageHandler != null && typeof messageHandler === "function")
-        messageHandler(aMessage);
+      if (messageHandler != null && typeof messageHandler === "function") messageHandler(aMessage);
     }
   }
 };
@@ -110,10 +88,7 @@ export let success = (...args: TArgs): void => {
   console.log(now(), "Success:\x1b[32m", ...args, "\x1b[0m");
 };
 
-export function connectTcpSocket(
-  ip: string,
-  port: number,
-): Promise<net.Socket> {
+export function connectTcpSocket(ip: string, port: number): Promise<net.Socket> {
   return new Promise((resolve, reject) => {
     try {
       const tcpClient = new net.Socket();

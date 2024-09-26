@@ -15,16 +15,12 @@ export class BaseClass {
   }
 
   _bind(arrayOfMethodNamesToBind: Array<string>): void {
-    arrayOfMethodNamesToBind.forEach((method) =>
-      this._doBind(method as keyof BaseClass),
-    );
+    arrayOfMethodNamesToBind.forEach((method) => this._doBind(method as keyof BaseClass));
   }
 
   _doBind(method: keyof BaseClass): void {
     // @ts-ignore
-    this[method]
-      ? (this[method] = this[method].bind(this))
-      : console.error("_bind", method, "failed");
+    this[method] ? (this[method] = this[method].bind(this)) : console.error("_bind", method, "failed");
   }
 
   _propertyIsNotOfTypeFunction(propertyName: keyof BaseClass): boolean {
@@ -34,8 +30,7 @@ export class BaseClass {
   buildMethodFreeVersionOfYou(): Record<string, unknown> {
     const properties: Array<string> = [];
     Object.keys(this).forEach((property) => {
-      if (this._propertyIsNotOfTypeFunction(property as keyof BaseClass))
-        properties.push(property);
+      if (this._propertyIsNotOfTypeFunction(property as keyof BaseClass)) properties.push(property);
     });
     return _pick(this, properties);
   }

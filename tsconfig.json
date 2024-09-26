@@ -3,7 +3,7 @@
     "noImplicitAny": true,
     "isolatedModules": true,
     "useDefineForClassFields": true,
-    "module": "CommonJS",    
+    "module": "CommonJS",
     "sourceMap": true,
     "target": "ESNext",
     "esModuleInterop": true,

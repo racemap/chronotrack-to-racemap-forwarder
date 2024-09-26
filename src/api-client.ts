@@ -1,57 +1,62 @@
-import { TimePing } from "./types";
+import withQuery from "with-query";
+import { StoredTimingRead, TimingRead } from "./types";
 
 class APIClient {
   _host = "";
+  _headers: HeadersInit = {};
 
-  constructor() {
+  constructor(headers: HeadersInit = {}) {
     this._host = "https://racemap.com";
+    this._headers = headers;
   }
 
-  async _fetch(
-    path: string,
-    options: RequestInit = {},
-  ): Promise<
-    Omit<Response, "json"> & {
-      json: (reviver?: <I, O>(key: string, value: I) => O) => Promise<any>;
-    }
-  > {
+  async _fetch(path: string, options: RequestInit = {}): Promise<Response> {
     const res = await fetch(`${this._host}${path}`, {
       ...options,
-      headers: options.headers || [],
+      headers: { ...this._headers, ...options.headers },
+    });
+
+    console.log({
+      ...options,
+      headers: { ...this._headers, ...options.headers },
     });
 
     return res;
   }
 
-  async _postJSON(
-    path: string,
-    data: Record<string, any> = {},
-    headers = {},
-  ): Promise<Response> {
+  async _getJSON(path: string): Promise<any> {
+    const res = await this._fetch(path, { headers: { Accept: "application/json" } });
+    return res.json();
+  }
+
+  async _postJSON(path: string, data: Record<string, any> = {}): Promise<Response> {
     return await this._fetch(path, {
       method: "POST",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        ...headers,
       },
       body: JSON.stringify(data),
     });
   }
 
   async checkAvailibility() {
-    return this.sendTimePingsAsJSON([]);
+    return this.sendTimingReadsAsJSON([]);
   }
 
-  async sendTimePingsAsJSON(
-    timePings: Array<TimePing>,
-    options = { headers: {} },
-  ): Promise<Response> {
-    return this._postJSON(
-      "/api/v1/timing_input/pings",
-      timePings,
-      options.headers,
-    );
+  async sendTimingReadsAsJSON(TimingReads: Array<TimingRead>, options = { headers: {} }): Promise<Response> {
+    return this._postJSON("/services/trackping/api/v1/timing_input/pings", TimingReads, options.headers);
+  }
+
+  async getTimingReads(query: {
+    timingIds: Array<string>;
+    transponderIds?: Array<string>;
+    startTime?: string;
+    endTime?: string;
+    firstReceive?: string;
+    lastReceive?: string;
+  }): Promise<Array<StoredTimingRead>> {
+    return this._getJSON(withQuery("/services/trackping/api/v1/timing_output/pings", query));
   }
 }
 

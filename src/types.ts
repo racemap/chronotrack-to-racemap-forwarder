@@ -1,7 +1,7 @@
 import net from "net";
 import ChronoTrackForwarder from "./forwarder";
 
-export type TimePing = {
+export type TimingRead = {
   timestamp: string; // Millis since EPOCH
   chipId: string; // BiB or TransponderId or ChipID
   timingId: string; // ID of Timing Hardware or the reader or the antenna
@@ -9,6 +9,10 @@ export type TimePing = {
   lat?: number | null; // Latitude on earth in degree if availible (most timing system does not have this)
   lng?: number | null; // Longitude on earth in degree
   alt?: number | null; // Elevation in meters above sea level
+};
+
+export type StoredTimingRead = TimingRead & {
+  receivedAt: string;
 };
 
 type ChronoTrackEvent = {
@@ -59,6 +63,7 @@ export type TFixtures = {
   newLocationName: string;
   connectionId: string;
   transponderId: string;
+  timingMacs: Array<string>;
 };
 
 export type TState = {
@@ -69,6 +74,8 @@ export type TState = {
     lastTime: number;
     buffer: Buffer;
   };
+  connectedClients: Array<ChronoTrackDevice>;
+  chronoTimingReads: Array<StoredTimingRead>;
 };
 
 export type ExtendedSocket = net.Socket & {

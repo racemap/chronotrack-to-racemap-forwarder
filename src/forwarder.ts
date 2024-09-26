@@ -6,22 +6,8 @@ import shortId from "shortid";
 import APIClient from "./api-client";
 import { BaseClass } from "./base-class";
 import { ChronoTrackCommands } from "./consts";
-import {
-  ChronoTrackDevice,
-  ChronoTrackProtocol,
-  ExtendedSocket,
-  MessageParts,
-  TimePing,
-} from "./types";
-import {
-  error,
-  info,
-  log,
-  processStoredData,
-  storeIncomingRawData,
-  success,
-  warn,
-} from "./functions";
+import { ChronoTrackDevice, ChronoTrackProtocol, ExtendedSocket, MessageParts, TimingRead } from "./types";
+import { error, info, log, processStoredData, storeIncomingRawData, success, warn } from "./functions";
 
 const MAX_MESSAGE_DATA_DELAY_IN_MS = 500;
 
@@ -36,13 +22,8 @@ const FEATURES = {
   "time-format": "iso",
 };
 
-const apiClient = new APIClient();
-
 const logToFileSystem = (message: Buffer) => {
-  fs.appendFileSync(
-    "./ChronoTrackInputAdapter.log",
-    `${new Date().toISOString()} message: ${message}\n`,
-  );
+  fs.appendFileSync("./ChronoTrackInputAdapter.log", `${new Date().toISOString()} message: ${message}\n`);
 };
 
 const clearIntervalTimer = (timerHandle: NodeJS.Timeout | null) => {
@@ -55,15 +36,14 @@ class ChronoTrackForwarder extends BaseClass {
   _connections: Map<string, ExtendedSocket> = new Map();
   _server: net.Server;
   _apiToken: string;
+  _apiClient: APIClient;
 
   constructor(apiToken: string, listenPort: number, justLocalHost = true) {
     super();
 
     this._apiToken = apiToken;
-    this._server = this._configureReceiverSocket(
-      listenPort,
-      justLocalHost ? "127.0.0.1" : "0.0.0.0",
-    );
+    this._apiClient = new APIClient({ "api-token": apiToken });
+    this._server = this._configureReceiverSocket(listenPort, justLocalHost ? "127.0.0.1" : "0.0.0.0");
   }
 
   getConnectedChronoTrackDevices(): Array<ChronoTrackDevice> {
@@ -72,17 +52,10 @@ class ChronoTrackForwarder extends BaseClass {
     });
   }
 
-  _configureReceiverSocket = (
-    listenPort: number,
-    bindAddress: string,
-  ): net.Server => {
-    const server = net.createServer(
-      this._onNewConnection as (socket: net.Socket) => void,
-    );
+  _configureReceiverSocket = (listenPort: number, bindAddress: string): net.Server => {
+    const server = net.createServer(this._onNewConnection as (socket: net.Socket) => void);
     server.listen({ host: bindAddress, port: listenPort }, () => {
-      info(
-        `${this.className} is listening on \x1b[32m${bindAddress}\x1b[0m:\x1b[35m${listenPort}\x1b[0m`,
-      );
+      info(`${this.className} is listening on \x1b[32m${bindAddress}\x1b[0m:\x1b[35m${listenPort}\x1b[0m`);
     });
     server.on("error", (err) => {
       error(`${this.className}._configureReceiverSocket`, err);
@@ -172,14 +145,8 @@ class ChronoTrackForwarder extends BaseClass {
     }
   };
 
-  _handleWelcomeMessage = (
-    refToSocket: ExtendedSocket,
-    parts: MessageParts,
-  ): void => {
-    if (
-      parts.length === 3 &&
-      (parts[0] === "SimpleClient" || parts[0] === "RacemapTestClient")
-    ) {
+  _handleWelcomeMessage = (refToSocket: ExtendedSocket, parts: MessageParts): void => {
+    if (parts.length === 3 && (parts[0] === "SimpleClient" || parts[0] === "RacemapTestClient")) {
       refToSocket.identified = true;
       refToSocket.meta = {
         name: parts[0],
@@ -190,9 +157,7 @@ class ChronoTrackForwarder extends BaseClass {
         locations: [],
         clientRespondedAt: new Date(),
       };
-      refToSocket.sendFrame(
-        `${WELCOME_MESSAGE}~${Object.keys(FEATURES).length}`,
-      );
+      refToSocket.sendFrame(`${WELCOME_MESSAGE}~${Object.keys(FEATURES).length}`);
       refToSocket.sendObject(FEATURES);
       refToSocket.sendFrame(ChronoTrackCommands.getconnectionid);
       refToSocket.sendFrame(ChronoTrackCommands.geteventinfo);
@@ -201,10 +166,7 @@ class ChronoTrackForwarder extends BaseClass {
     }
   };
 
-  _handleMessages = (
-    refToSocket: ExtendedSocket,
-    parts: MessageParts,
-  ): void => {
+  _handleMessages = (refToSocket: ExtendedSocket, parts: MessageParts): void => {
     if (refToSocket.meta.protocol === SUPPORTED_PROTOCOL) {
       const len = parts.length;
       if (len > 1 && parts[1] === ChronoTrackCommands.getlocations) {
@@ -216,29 +178,20 @@ class ChronoTrackForwarder extends BaseClass {
       }
       switch (len) {
         case 2: {
-          if (
-            parts[0] === ChronoTrackCommands.ack &&
-            parts[1] === ChronoTrackCommands.ping
-          ) {
+          if (parts[0] === ChronoTrackCommands.ack && parts[1] === ChronoTrackCommands.ping) {
             refToSocket.meta.clientRespondedAt = new Date();
           }
           break;
         }
         case 3: {
-          if (
-            parts[0] === ChronoTrackCommands.ack &&
-            parts[1] === ChronoTrackCommands.getconnectionid
-          ) {
+          if (parts[0] === ChronoTrackCommands.ack && parts[1] === ChronoTrackCommands.getconnectionid) {
             refToSocket.meta.clientRespondedAt = new Date();
             refToSocket.meta.connectionId = parts[2];
           }
           break;
         }
         case 5: {
-          if (
-            parts[0] === ChronoTrackCommands.ack &&
-            parts[1] === ChronoTrackCommands.geteventinfo
-          ) {
+          if (parts[0] === ChronoTrackCommands.ack && parts[1] === ChronoTrackCommands.geteventinfo) {
             refToSocket.meta.clientRespondedAt = new Date();
             refToSocket.meta.event = {
               id: parts[3],
@@ -249,7 +202,7 @@ class ChronoTrackForwarder extends BaseClass {
           break;
         }
         case 8: {
-          this._processTimePing(refToSocket, parts);
+          this._processTimingRead(refToSocket, parts);
           break;
         }
         default: {
@@ -258,19 +211,14 @@ class ChronoTrackForwarder extends BaseClass {
         }
       }
     } else {
-      warn(
-        `${this.className} - We do not handle messages using protocol ${refToSocket.meta.protocol}`,
-      );
+      warn(`${this.className} - We do not handle messages using protocol ${refToSocket.meta.protocol}`);
     }
   };
 
-  _processTimePing = (
-    refToSocket: ExtendedSocket,
-    parts: MessageParts,
-  ): void => {
+  _processTimingRead = (refToSocket: ExtendedSocket, parts: MessageParts): void => {
     const protocolId = parts[0];
 
-    const savePing = (someParts: Array<string>) => {
+    const saveRead = (someParts: Array<string>) => {
       let chipId = someParts[3];
 
       // All ChronoTrack Transponder IDs are prefixed with ChronoPing_
@@ -279,7 +227,7 @@ class ChronoTrackForwarder extends BaseClass {
         chipId = `ChronoPing_${chipId}`;
       }
 
-      const timePing: TimePing = {
+      const TimingRead: TimingRead = {
         chipId, // the transponder registered by the antenna
         timingId: someParts[6], // MAC Address of the reader (often each antenna has a own MAC address)
         timestamp: this._parseTime(refToSocket, someParts[4]).toISOString(),
@@ -290,7 +238,7 @@ class ChronoTrackForwarder extends BaseClass {
         timingName: someParts[2],
       };
 
-      this._pushNonlocatedReadToRacemap(timePing);
+      this._pushNonlocatedReadToRacemap(TimingRead);
     };
 
     switch (protocolId) {
@@ -308,7 +256,7 @@ class ChronoTrackForwarder extends BaseClass {
           7 Reader antenna Port = is always between 1-8 It is just for us that we now wich antenna had read something. If this is 0 it will be a GUN START normally
           */
 
-        savePing(parts);
+        saveRead(parts);
 
         break;
       }
@@ -324,7 +272,7 @@ class ChronoTrackForwarder extends BaseClass {
             this._triggerStartTransmission(refToSocket, newLocationName);
           }, 1000);
         } else {
-          savePing(parts);
+          saveRead(parts);
         }
 
         // CT01_33~4~start~guntime~07:45:01.01~0~DF239A~0
@@ -333,9 +281,7 @@ class ChronoTrackForwarder extends BaseClass {
       }
 
       default: {
-        warn(
-          `protocolId: ${protocolId} of ChronoTrack textfile-format is not supported yet`,
-        );
+        warn(`protocolId: ${protocolId} of ChronoTrack textfile-format is not supported yet`);
         break;
       }
     }
@@ -361,15 +307,18 @@ class ChronoTrackForwarder extends BaseClass {
     return time;
   }
 
-  _triggerStartTransmission(
-    socket: ExtendedSocket,
-    locationName: string,
-  ): void {
+  _triggerStartTransmission(socket: ExtendedSocket, locationName: string): void {
     socket.sendFrame(`${ChronoTrackCommands.start}~${locationName}`);
   }
 
-  async _pushNonlocatedReadToRacemap(timePing: TimePing): Promise<void> {
-    log("tryToPushNonlocatedReadToRacemap", timePing);
+  async _pushNonlocatedReadToRacemap(TimingRead: TimingRead): Promise<void> {
+    // log("tryToPushNonlocatedReadToRacemap", TimingRead);
+    const response = await this._apiClient.sendTimingReadsAsJSON([TimingRead]);
+    if (response.status === 200) {
+      success("tryToPushNonlocatedReadToRacemap", TimingRead);
+    } else {
+      warn("tryToPushNonlocatedReadToRacemap", response.status);
+    }
   }
 }
 
