@@ -1,12 +1,14 @@
 import withQuery from "with-query";
 import { StoredTimingRead, TimingRead } from "./types";
 
+const RACEMAP_API_HOST = process.env.RACEMAP_API_HOST || "https://racemap.com";
+
 class APIClient {
   _host = "";
   _headers: HeadersInit = {};
 
   constructor(headers: HeadersInit = {}) {
-    this._host = "https://racemap.com";
+    this._host = RACEMAP_API_HOST;
     this._headers = headers;
   }
 
@@ -38,8 +40,8 @@ class APIClient {
     return this.sendTimingReadsAsJSON([]);
   }
 
-  async sendTimingReadsAsJSON(TimingReads: Array<TimingRead>, options = { headers: {} }): Promise<Response> {
-    return this._postJSON("/services/trackping/api/v1/timing_input/pings", TimingReads, options.headers);
+  async sendTimingReadsAsJSON(TimingReads: Array<TimingRead>): Promise<Response> {
+    return this._postJSON("/services/trackping/api/v1/timing_input/pings", TimingReads);
   }
 
   async getTimingReads(query: {

@@ -8,7 +8,7 @@ import { sleep, shortIdBuilder, connectTcpSocket, processStoredData, storeIncomi
 
 const chronoTrackForwarderHostname = "localhost";
 const chronoTrackForwarderPort = Number.parseInt(process.env.PORT || "3000");
-const apiToken = process.env.RACEMAP_GENERIC_READS_API_TOKEN ?? "";
+const apiToken = process.env.RACEMAP_API_TOKEN ?? "";
 const apiClient = new APIClient();
 
 const shortId001 = shortIdBuilder();
