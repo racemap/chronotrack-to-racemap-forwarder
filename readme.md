@@ -1,22 +1,24 @@
 # chronotrack-to-racemap-forwarder
 
-This is a small service that is meant connect ChronoTrek timing systems to the racemap backend. Its called a forwarder because it forwards the data from the timing system to racemap.com. It also manages the communication with the Chronotrek Software.
+Our forwarder service connects chronotrack timing systems with RACEMAP backend to forward the reads/ detections from the timing system to racemap.com. 
+The service also manages the communication with the chronotrack software.
 
-- it opens a port und the machine its running on default is **3000**
-- it listens on localhost IP: **127.0.0.1**
-- it requires an API Token to forward reads, detections whatwever you call it to racemap.com
-- the token is set by using the environment var **RACEMAP_API_TOKEN**
+- opens a port, by default the running machine is **3000**
+- listens on localhost IP: **127.0.0.1**
+- RACEMAP API token is needed to forward data to racemap.com
+- API token is set by using the environment var **RACEMAP_API_TOKEN**
 
 ## How to use
 
-1. Get the API Token from racemap.com
-2. Run the service with the API Token as an environment variable
-3. Configure your timing system to send data to the service
-4. The service will forward the data to racemap.com
+1. Request the API token for your RACEMAP account, contact info@racemap.com.
+2. Download the service to the computer on which the chronotrack timing software is running.
+3. Run the service with the API token as an environment variable.
+4. Configure your timing system to send data to the service.
+5. The service will forward your data to racemap.com.
 
 ## How to run the service
 
-### I just want to use it
+### I just want to use the service
 
 You can download the latest binary for your platform from the here and run it with the following commands.
 
@@ -51,13 +53,13 @@ You can checkout the repository and run the service with the following commands.
   yarn start
 ```
 
-## Settings you can make
+## Possible settings
 
 You can change the defaults of the service by overriding the following environment variables
 
 | Variable          | Default             | Description                                                                                                   |
 | ----------------- | ------------------- | ------------------------------------------------------------------------------------------------------------- |
-| RACEMAP_API_TOKEN | ''                  | The API Token to use for the racemap API                                                                      |
+| RACEMAP_API_TOKEN | ''                  | The API Token is required to send data to RACEMAP                                                                      |
 | LISTEN_MODE       | private             | The mode the service listens on, can be private or public. private binds to 127.0.0.1 public binds to 0.0.0.0 |
 | LISTEN_PORT       | 3000                | The port the service listens on                                                                               |
 | RACEMAP_API_HOST  | https://racemap.com | The host to send the requests to                                                                              |
