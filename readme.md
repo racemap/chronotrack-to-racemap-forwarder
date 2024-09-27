@@ -29,6 +29,7 @@ You can download the latest binary for your platform from the here and run it wi
 set RACEMAP_API_TOKEN=your-api-token
 .\chronotrack-to-racemap-forwarder.exe
 ```
+![image](https://github.com/user-attachments/assets/1d16ec20-4b79-4207-bccc-f7196a679809)
 
 #### Linux
 
