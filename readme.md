@@ -18,7 +18,10 @@ This is a small service that is meant connect ChronoTrek timing systems to the r
 
 ### I just want to use it
 
-You can download the latest binary for your platform from the .bin folder and run it with the following commands.
+You can download the latest binary for your platform from the here and run it with the following commands.
+
+- [chronotrack-to-racemap-forwarder-win-x64-v1.0.0.exe](https://github.com/racemap/chronotrack-to-racemap-forwarder/releases/download/v1.0.0/chronotrack-to-racemap-forwarder-win-x64-v1.0.0.exe)
+- [chronotrack-to-racemap-forwarder-win-x64-v1.0.0.exe](https://github.com/racemap/chronotrack-to-racemap-forwarder/releases/download/v1.0.0/chronotrack-to-racemap-forwarder-linux-x64-v1.0.0.exe)
 
 #### Windows
 
