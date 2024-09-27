@@ -125,3 +125,13 @@ export function sleep(millisToSleep: number): Promise<void> {
     }, millisToSleep);
   });
 }
+
+export const printEnvVar = (envVar: { [name: string]: unknown }, isPublic = true): void => {
+  let name = "???";
+  let value: unknown | null = null;
+  if (envVar != null && typeof envVar === "object" && Object.keys(envVar).length === 1) {
+    name = Object.keys(envVar)[0];
+    value = isPublic ? Object.values(envVar)[0] : "***";
+  }
+  console.log(now(), "Log:", `    |-> \x1b[35m${name}\x1b[0m: \x1b[36m${value || "???"}\x1b[0m`);
+};

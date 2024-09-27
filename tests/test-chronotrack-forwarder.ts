@@ -4,12 +4,19 @@ import ChronoTrackForwarder from "../src/forwarder";
 import { serial as test } from "ava";
 import { ChronoTrackCommands, CRLF } from "../src/consts";
 import { TFixtures, TPredictionTestTimes, TState } from "../src/types";
-import { sleep, shortIdBuilder, connectTcpSocket, processStoredData, storeIncomingRawData } from "../src/functions";
+import { sleep, shortIdBuilder, connectTcpSocket, processStoredData, storeIncomingRawData, printEnvVar } from "../src/functions";
 
-const chronoTrackForwarderHostname = "localhost";
-const chronoTrackForwarderPort = Number.parseInt(process.env.PORT || "3000");
-const apiToken = process.env.RACEMAP_API_TOKEN ?? "";
-const apiClient = new APIClient();
+const RACEMAP_API_HOST = process.env.RACEMAP_API_HOST ?? "https://racemap.com";
+const RACEMAP_API_TOKEN = process.env.RACEMAP_API_TOKEN ?? "";
+const LISTEN_MODE = process.env.LISTEN_MODE?.toLocaleLowerCase() ?? "private";
+const LISTEN_PORT = Number.parseInt(process.env.LISTEN_PORT || "3000");
+
+printEnvVar({ RACEMAP_API_HOST });
+printEnvVar({ RACEMAP_API_TOKEN });
+printEnvVar({ LISTEN_MODE });
+printEnvVar({ LISTEN_PORT });
+
+const forwarderIPAddress = LISTEN_MODE === "private" ? "127.0.0.1" : "0.0.0.0";
 
 const shortId001 = shortIdBuilder();
 const times: TPredictionTestTimes = {
@@ -52,6 +59,7 @@ const state: TState = {
     buffer: Buffer.alloc(0),
   },
   connectedClients: [],
+  chronoTimingReads: [],
 };
 
 test("Ava is running, fixtures and state exists", async (t) => {
@@ -61,12 +69,12 @@ test("Ava is running, fixtures and state exists", async (t) => {
 });
 
 test("Try to spin up an instance of the chronotrack forwarder", async (t) => {
-  state.forwarder = new ChronoTrackForwarder(apiToken, chronoTrackForwarderPort);
+  state.forwarder = new ChronoTrackForwarder(RACEMAP_API_TOKEN, LISTEN_PORT);
   t.not(state.forwarder, null, "instance of ChronoTrackForwarder is not null");
 });
 
-test(`should connect to tcp://${chronoTrackForwarderHostname}:${chronoTrackForwarderPort}`, async (t) => {
-  state.aTCPClient = await connectTcpSocket(chronoTrackForwarderHostname, chronoTrackForwarderPort);
+test(`should connect to tcp://${forwarderIPAddress}:${LISTEN_PORT}`, async (t) => {
+  state.aTCPClient = await connectTcpSocket(forwarderIPAddress, LISTEN_PORT);
   t.not(state.aTCPClient, null, "tcp client should be not null but is");
 
   if (state.aTCPClient != null) {
@@ -139,23 +147,26 @@ test(`should connect to tcp://${chronoTrackForwarderHostname}:${chronoTrackForwa
 
 test("should send the welcome message through the socket", async (t) => {
   t.not(state.aTCPClient, null, "tcp client is not null");
-
-  t.true(await state.aTCPClient.write(`RacemapTestClient~1.0.0~CTP01${CRLF}`), "it should be possible to write a welcome message to the socket");
-  // give the server some time to answer!
-  await sleep(500);
+  if (state.aTCPClient != null) {
+    t.true(state.aTCPClient.write(`RacemapTestClient~1.0.0~CTP01${CRLF}`), "it should be possible to write a welcome message to the socket");
+    // give the server some time to answer!
+    await sleep(500);
+  }
 });
 
 test("should send a TimingRead through the socket", async (t) => {
   t.not(state.aTCPClient, null, "tcp client should be initialized but is not");
 
-  t.true(
-    await state.aTCPClient.write(
-      `CT01_13~21~START~${fixtures.transponderId}~${moment(times.testStartTime).utc().format("YYYY-MM-DDTHH:mm:ss.SS")}~1~117F37~8` + CRLF,
-    ),
-    "it should be possible to send a TimingRead through the socket",
-  );
-  // give the server some time to answer!
-  await sleep(500);
+  if (state.aTCPClient != null) {
+    t.true(
+      state.aTCPClient.write(
+        `CT01_13~21~START~${fixtures.transponderId}~${moment(times.testStartTime).utc().format("YYYY-MM-DDTHH:mm:ss.SS")}~1~117F37~8` + CRLF,
+      ),
+      "it should be possible to send a TimingRead through the socket",
+    );
+    // give the server some time to answer!
+    await sleep(500);
+  }
 });
 
 test("should be possible to find the correct client config messages in the server welcome messages for (guntimes, newlocations, connection-id, stream-mode and time-format)", (t) => {

@@ -11,7 +11,7 @@
     "build-forwarder": "esbuild src/main.ts --bundle --platform=node --outfile=.build/chronotrack-to-racemap-forwarder.js",
     "build-tests": "esbuild tests/test-chronotrack-forwarder.ts --bundle --platform=node --outfile=.build/test-chronotrack-forwarder.js",
     "test": "yarn build && dotenv-load ava .build/test-chronotrack-forwarder.js",
-    "dev": "yarn build && dotenv-load node .build/hronotrack-to-racemap-forwarder.js ",
+    "start": "yarn build && dotenv-load node .build/chronotrack-to-racemap-forwarder.js ",
     "bundle": "yarn build && pkg --compress brotli -t node18-win-x64,node18-linux-x64,node18-macos-x64 .build/chronotrack-to-racemap-forwarder.js --out-path .bin",
     "pretty": "prettier --write .",
     "prepare": "husky"
