@@ -1,5 +1,10 @@
 import net from "net";
-import ChronoTrackForwarder from "./forwarder";
+import { ChronoTrackForwarder } from "./forwarder";
+
+export enum ListenModes {
+  PRIVATE = "PRIVATE",
+  PUBLIC = "PUBLIC",
+}
 
 export type TimingRead = {
   timestamp: string; // Millis since EPOCH

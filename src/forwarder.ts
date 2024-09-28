@@ -6,8 +6,8 @@ import shortId from "shortid";
 import APIClient from "./api-client";
 import { BaseClass } from "./base-class";
 import { ChronoTrackCommands } from "./consts";
-import { ChronoTrackDevice, ChronoTrackProtocol, ExtendedSocket, MessageParts, TimingRead } from "./types";
-import { error, info, log, processStoredData, storeIncomingRawData, success, warn } from "./functions";
+import { ChronoTrackDevice, ChronoTrackProtocol, ExtendedSocket, ListenModes, MessageParts, TimingRead } from "./types";
+import { error, info, listenHostByListenMode, log, processStoredData, storeIncomingRawData, success, warn } from "./functions";
 
 const MAX_MESSAGE_DATA_DELAY_IN_MS = 500;
 
@@ -22,6 +22,12 @@ const FEATURES = {
   "time-format": "iso",
 };
 
+export let chronoTrackForwarder: ChronoTrackForwarder;
+
+export function initChronoTrackForwarder(apiToken: string, listenPort: number, listenMode: ListenModes): void {
+  chronoTrackForwarder = new ChronoTrackForwarder(apiToken, listenPort, listenMode);
+}
+
 const logToFileSystem = (message: Buffer) => {
   fs.appendFileSync("./ChronoTrackInputAdapter.log", `${new Date().toISOString()} message: ${message}\n`);
 };
@@ -32,23 +38,23 @@ const clearIntervalTimer = (timerHandle: NodeJS.Timeout | null) => {
   }
 };
 
-class ChronoTrackForwarder extends BaseClass {
+export class ChronoTrackForwarder extends BaseClass {
   _connections: Map<string, ExtendedSocket> = new Map();
   _server: net.Server;
   _apiToken: string;
   _apiClient: APIClient;
 
-  constructor(apiToken: string, listenPort: number, justLocalHost = true) {
+  constructor(apiToken: string, listenPort: number, listenMode: ListenModes) {
     super();
 
     this._apiToken = apiToken;
     this._apiClient = new APIClient({ "api-token": apiToken });
-    this._server = this._configureReceiverSocket(listenPort, justLocalHost ? "127.0.0.1" : "0.0.0.0");
+    this._server = this._configureReceiverSocket(listenPort, listenHostByListenMode(listenMode));
   }
 
   getConnectedChronoTrackDevices(): Array<ChronoTrackDevice> {
     return Array.from(this._connections.entries()).map(([_id, socket]) => {
-      return _pick(socket, ["id", "meta", "openedAt"]);
+      return _pick<ExtendedSocket>(socket, ["id", "meta", "openedAt"]);
     });
   }
 
@@ -321,5 +327,3 @@ class ChronoTrackForwarder extends BaseClass {
     }
   }
 }
-
-export default ChronoTrackForwarder;

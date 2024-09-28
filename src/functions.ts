@@ -6,6 +6,7 @@
  */
 
 import net from "net";
+import { ListenModes } from "./types";
 
 const CRLF = "\r\n";
 
@@ -99,6 +100,15 @@ export function connectTcpSocket(ip: string, port: number): Promise<net.Socket> 
       reject(err);
     }
   });
+}
+
+export function listenHostByListenMode(listenMode: ListenModes): string {
+  // defaults to private in case of invalid input
+  return listenMode !== ListenModes.PUBLIC ? "127.0.0.1" : "0.0.0.0";
+}
+
+export function listenModeByinput(input: string): ListenModes {
+  return input === "public" ? ListenModes.PUBLIC : ListenModes.PRIVATE;
 }
 
 /**

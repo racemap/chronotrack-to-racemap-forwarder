@@ -1,9 +1,9 @@
 import moment from "moment";
 import APIClient from "../src/api-client";
-import ChronoTrackForwarder from "../src/forwarder";
 import { serial as test } from "ava";
+import { ChronoTrackForwarder } from "../src/forwarder";
 import { ChronoTrackCommands, CRLF } from "../src/consts";
-import { TFixtures, TPredictionTestTimes, TState } from "../src/types";
+import { ListenModes, TFixtures, TPredictionTestTimes, TState } from "../src/types";
 import { sleep, shortIdBuilder, connectTcpSocket, processStoredData, storeIncomingRawData, printEnvVar } from "../src/functions";
 
 const RACEMAP_API_HOST = process.env.RACEMAP_API_HOST ?? "https://racemap.com";
@@ -69,7 +69,7 @@ test("Ava is running, fixtures and state exists", async (t) => {
 });
 
 test("Try to spin up an instance of the chronotrack forwarder", async (t) => {
-  state.forwarder = new ChronoTrackForwarder(RACEMAP_API_TOKEN, LISTEN_PORT);
+  state.forwarder = new ChronoTrackForwarder(RACEMAP_API_TOKEN, LISTEN_PORT, ListenModes.PRIVATE);
   t.not(state.forwarder, null, "instance of ChronoTrackForwarder is not null");
 });
 
