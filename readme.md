@@ -1,12 +1,14 @@
 # chronotrack-to-racemap-forwarder
 
-Our forwarder service connects chronotrack timing systems with RACEMAP backend to forward the reads/ detections from the timing system to racemap.com. 
+Our forwarder service connects chronotrack timing systems with RACEMAP backend to forward the reads/ detections from the timing system to racemap.com.
 The service also manages the communication with the chronotrack software.
 
 - opens a port, by default the running machine is **3000**
 - listens on localhost IP: **127.0.0.1**
 - RACEMAP API token is needed to forward data to racemap.com
 - API token is set by using the environment var **RACEMAP_API_TOKEN**
+
+![image](./docs/information-flow.excalidraw.svg)
 
 ## How to use
 
@@ -31,6 +33,7 @@ You can download the latest binary for your platform from the here and run it wi
 set RACEMAP_API_TOKEN=your-api-token
 .\chronotrack-to-racemap-forwarder.exe
 ```
+
 ![image](https://github.com/user-attachments/assets/1d16ec20-4b79-4207-bccc-f7196a679809)
 
 #### Linux
@@ -59,7 +62,7 @@ You can change the defaults of the service by overriding the following environme
 
 | Variable          | Default             | Description                                                                                                   |
 | ----------------- | ------------------- | ------------------------------------------------------------------------------------------------------------- |
-| RACEMAP_API_TOKEN | ''                  | The API Token is required to send data to RACEMAP                                                                      |
+| RACEMAP_API_TOKEN | ''                  | The API Token is required to send data to RACEMAP                                                             |
 | LISTEN_MODE       | private             | The mode the service listens on, can be private or public. private binds to 127.0.0.1 public binds to 0.0.0.0 |
 | LISTEN_PORT       | 3000                | The port the service listens on                                                                               |
 | RACEMAP_API_HOST  | https://racemap.com | The host to send the requests to                                                                              |
